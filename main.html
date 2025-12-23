@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Pro Quiz App</title>
+<meta charset="UTF-8">
+
+<style>
+:root{
+    --bg: linear-gradient(135deg,#1f4037,#99f2c8);
+    --card: rgba(255,255,255,0.15);
+    --btn: rgba(255,255,255,0.9);
+    --text: white;
+}
+.light{
+    --bg: linear-gradient(135deg,#fdfbfb,#ebedee);
+    --card: rgba(0,0,0,0.1);
+    --btn: #fff;
+    --text: #000;
+}
+
+body{
+    margin:0;
+    height:100vh;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    background:var(--bg);
+    font-family:Segoe UI;
+    color:var(--text);
+}
+
+.quiz-box{
+    width:450px;
+    padding:25px;
+    border-radius:20px;
+    background:var(--card);
+    backdrop-filter:blur(12px);
+    box-shadow:0 20px 50px rgba(0,0,0,0.4);
+}
+
+.top{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+
+.toggle{
+    cursor:pointer;
+    padding:5px 10px;
+    background:#1dd1a1;
+    border-radius:10px;
+    color:white;
+}
+
+select{
+    width:100%;
+    padding:10px;
+    margin:15px 0;
+    border-radius:10px;
+    border:none;
+}
+
+.progress{
+    height:8px;
+    background:rgba(255,255,255,0.3);
+    border-radius:10px;
+    overflow:hidden;
+}
+.bar{
+    height:100%;
+    width:0%;
+    background:#1dd1a1;
+}
+
+.timer{
+    text-align:right;
+    margin:8px 0;
+}
+
+.question{
+    font-size:18px;
+    margin:15px 0;
+}
+
+.options button{
+    width:100%;
+    padding:10px;
+    margin:6px 0;
+    border:none;
+    border-radius:10px;
+    cursor:pointer;
+    transition:0.2s;
+    background:var(--btn);
+}
+.options button:hover{ transform:scale(1.03); }
+
+.correct{ background:#1dd1a1;color:white; }
+.wrong{ background:#ee5253;color:white; }
+
+.next{
+    display:none;
+    margin-top:10px;
+    width:100%;
+    padding:10px;
+    border:none;
+    border-radius:10px;
+    background:#ff9f43;
+    color:white;
+    cursor:pointer;
+}
+
+.result{
+    text-align:center;
+}
+.restart{
+    margin-top:10px;
+    padding:10px;
+    border:none;
+    border-radius:10px;
+    background:#54a0ff;
+    color:white;
+    cursor:pointer;
+}
+</style>
+</head>
+
+<body>
+
+<div class="quiz-box">
+    <div class="top">
+        <h3>Pro Quiz</h3>
+        <div class="toggle" onclick="toggleMode()">🌙 / ☀</div>
+    </div>
+
+    <select id="category" onchange="startQuiz()">
+        <option value="">Select Category</option>
+        <option value="frontend">Frontend</option>
+        <option value="programming">Programming</option>
+    </select>
+
+    <div class="progress"><div class="bar" id="bar"></div></div>
+    <div class="timer">⏱ <span id="time">10</span>s</div>
+
+    <div id="quiz">
+        <div class="question" id="question"></div>
+        <div class="options" id="options"></div>
+        <button class="next" id="next" onclick="nextQ()">Next</button>
+    </div>
+
+    <div class="result" id="result"></div>
+</div>
+
+<audio id="correctSound" src="https://www.soundjay.com/buttons/sounds/button-3.mp3"></audio>
+<audio id="wrongSound" src="https://www.soundjay.com/buttons/sounds/button-10.mp3"></audio>
+
+<script>
+const data = {
+frontend:[
+ {q:"HTML stands for?",o:["Hyper Text Markup Language","High Text Machine Language","Hyperlinks Text Mark","None"],a:0},
+ {q:"CSS is used for?",o:["Logic","Styling","Database","Server"],a:1}
+],
+programming:[
+ {q:"Which is compiled language?",o:["Python","Java","HTML","CSS"],a:1},
+ {q:"Which loop runs at least once?",o:["for","while","do-while","foreach"],a:2}
+]
+};
+
+let questions=[], index=0, score=0, time=10, timer;
+
+const qEl=document.getElementById("question");
+const oEl=document.getElementById("options");
+const bar=document.getElementById("bar");
+const timeEl=document.getElementById("time");
+const next=document.getElementById("next");
+const result=document.getElementById("result");
+
+function startQuiz(){
+    let cat=document.getElementById("category").value;
+    if(!cat) return;
+
+    questions=[...data[cat]].sort(()=>Math.random()-0.5);
+    index=score=0;
+    result.innerHTML="";
+    loadQ();
+}
+
+function loadQ(){
+    clearInterval(timer);
+    time=10;
+    timeEl.innerText=time;
+
+    timer=setInterval(()=>{
+        time--;
+        timeEl.innerText=time;
+        if(time==0){ clearInterval(timer); nextQ(); }
+    },1000);
+
+    let q=questions[index];
+    qEl.innerText=q.q;
+    oEl.innerHTML="";
+    q.o.forEach((op,i)=>{
+        let b=document.createElement("button");
+        b.innerText=op;
+        b.onclick=()=>check(b,i);
+        oEl.appendChild(b);
+    });
+    next.style.display="none";
+    bar.style.width=(index/questions.length)*100+"%";
+}
+
+function check(btn,i){
+    clearInterval(timer);
+    let correct=questions[index].a;
+    if(i===correct){
+        btn.classList.add("correct");
+        document.getElementById("correctSound").play();
+        score++;
+    }else{
+        btn.classList.add("wrong");
+        document.getElementById("wrongSound").play();
+    }
+    [...oEl.children].forEach(b=>b.disabled=true);
+    next.style.display="block";
+}
+
+function nextQ(){
+    index++;
+    if(index<questions.length) loadQ();
+    else showResult();
+}
+
+function showResult(){
+    quiz.innerHTML="";
+    bar.style.width="100%";
+    let percent=(score/questions.length)*100;
+    let badge=percent>=80?"🏆 Excellent":percent>=50?"👍 Good":"🙂 Practice";
+    result.innerHTML=`<h3>Score: ${score}/${questions.length}</h3>
+                      <p>${percent}%</p>
+                      <h2>${badge}</h2>
+                      <button class="restart" onclick="location.reload()">Restart</button>`;
+}
+
+function toggleMode(){
+    document.body.classList.toggle("light");
+}
+</script>
+
+</body>
+</html>
